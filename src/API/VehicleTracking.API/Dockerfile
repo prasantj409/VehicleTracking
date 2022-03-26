@@ -1,0 +1,26 @@
+#See https://aka.ms/containerfastmode to understand how Visual Studio uses this Dockerfile to build your images for faster debugging.
+
+FROM mcr.microsoft.com/dotnet/aspnet:5.0-buster-slim AS base
+WORKDIR /app
+EXPOSE 80
+EXPOSE 443
+
+FROM mcr.microsoft.com/dotnet/sdk:5.0-buster-slim AS build
+WORKDIR /src
+COPY ["src/API/VehicleTracking.API/VehicleTracking.API.csproj", "src/API/VehicleTracking.API/"]
+COPY ["src/Application/VehicleTracking.Services/VehicleTracking.Service.csproj", "src/Application/VehicleTracking.Services/"]
+COPY ["src/Domain/VehicleTracking.Domain/VehicleTracking.Domain.csproj", "src/Domain/VehicleTracking.Domain/"]
+COPY ["src/Infrastructure/VehicleTracking.Repository/VehicleTracking.Repository.csproj", "src/Infrastructure/VehicleTracking.Repository/"]
+COPY ["src/Infrastructure/Persistence/VehicleTracking.DB/VehicleTracking.DB.csproj", "src/Infrastructure/Persistence/VehicleTracking.DB/"]
+RUN dotnet restore "src/API/VehicleTracking.API/VehicleTracking.API.csproj"
+COPY . .
+WORKDIR "/src/src/API/VehicleTracking.API"
+RUN dotnet build "VehicleTracking.API.csproj" -c Release -o /app/build
+
+FROM build AS publish
+RUN dotnet publish "VehicleTracking.API.csproj" -c Release -o /app/publish
+
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "VehicleTracking.API.dll"]

@@ -1,0 +1,56 @@
+--- 
+services: 
+  db: 
+    environment: 
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Pa$$word1!
+    image: "mcr.microsoft.com/mssql/server:2019-latest"
+    ports:
+      - "1435:1433"
+    volumes: 
+      - ./storage/data:/var/opt/mssql/data
+      - ./storage/log:/var/opt/mssql/log
+      - ./storage/secret:/var/opt/mssql/secrets
+  rabbitmq: 
+    hostname: rabbitmq
+    image: "rabbitmq:3-management"
+    labels: 
+      NAME: rabbitmq
+    ports: 
+      - "4369:4369"
+      - "5671:5671"
+      - "5672:5672"
+      - "25672:25672"
+      - "15671:15671"
+      - "15672:15672"
+  record-device-service: 
+    build: 
+      context: "."
+      dockerfile: src/VehicleTracking.Services.RecordDevicePosition/Dockerfile
+    container_name: record-device
+    environment: 
+      - ASPNETCORE_ENVIRONMENT=Development
+      - "ASPNETCORE_URLS=http://+:80"
+      - ConnectionStrings__DefaultConnection=Server=db;Database=VehicleTrackingV1;User=sa;Password=Pa$$word1!;
+    links: 
+      - "db:db"
+    ports: 
+      - "8005:80"
+      - "8006:81"
+    restart: unless-stopped
+  vehicle-tracking-api: 
+    build: 
+      context: "."
+      dockerfile: src/API/VehicleTracking.API/Dockerfile
+    container_name: vehicle-tracking
+    environment: 
+      - ASPNETCORE_ENVIRONMENT=Development
+      - "ASPNETCORE_URLS=http://+:80"
+      - ConnectionStrings__DefaultConnection=Server=db;Database=VehicleTrackingV1;User=sa;Password=Pa$$word1!;
+    links: 
+      - "db:db"
+    ports: 
+      - "7005:80"
+      - "7006:81"
+    restart: unless-stopped
+version: "3.6"
